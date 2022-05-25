@@ -30,6 +30,7 @@
         "optional": "cpp",
         "random": "cpp",
         "ratio": "cpp",
+        "semaphore": "cpp",
         "string": "cpp",
         "string_view": "cpp",
         "system_error": "cpp",

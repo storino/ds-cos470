@@ -30,7 +30,6 @@ int accumulator = 0;
 signed char *vec_init(int N)
 {
     srand(time(NULL));
-
     signed char* vec = (signed char*)malloc((N)*sizeof(char));
 
     for(int i=0; i < N; i++) vec[i] = (signed char)(rand() % 201) - 100;
@@ -46,9 +45,7 @@ void add(signed char *vec, int start, int end)
     for (int i = start; i <= end; i++) result += vec[i];
 
     acquire(&thread_lock);
-
     accumulator += result;
-
     release(&thread_lock);
 }
 
@@ -59,7 +56,6 @@ int main(int argc, char* argv[])
     int K = atoi(argv[2]);
 
     signed char *vec;
-
     vec = vec_init(N);
 
     vector<thread> threads;
@@ -71,9 +67,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < K; ++i)
     {
         start = i * (N / K);
-
         end = (i == K - 1) ? (i + 1) * (N / K) - 1 : N - 1;
-
         threads.push_back(thread(add, vec, start, end));
     }
 
@@ -81,8 +75,8 @@ int main(int argc, char* argv[])
 
     auto program_end = chrono::high_resolution_clock::now();
 
-    int time_taken = 
-      chrono::duration_cast<chrono::nanoseconds>(program_end - program_start).count();
+    double time_taken = 
+        chrono::duration_cast<chrono::nanoseconds>(program_end - program_start).count();
 
     time_taken *= 1e-6;
     
