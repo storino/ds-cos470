@@ -23,7 +23,7 @@ using namespace std;
 #define TRUE  1 
 #define FALSE 0 
 #define PORT  4242
-#define NT    3
+#define NT    2
 
 const int queue_size = 15;
 bool gambiarra_no_jutsu;
@@ -118,6 +118,31 @@ class Queue { // an interface for a queue
         }
 };
 
+class Dict_Sockets {
+    private:
+        map <int, int> dic_sockets;
+
+    public:
+        Dict_Sockets()
+        {
+            dic_sockets = map <int, int>();
+        }
+
+        void insert_socket_if_nescessary(int process_id, int socket)
+        {
+            if (dic_sockets[process_id] == 0)
+            {
+                dic_sockets[process_id] = socket;
+            }   
+        }
+
+        int get_socket(int process_id)
+        {
+            return dic_sockets[process_id];
+        }
+
+};
+
 class Process_Counter {
     private:
         map <int, int> dic_process;
@@ -207,7 +232,7 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
 
 int main(int argc , char *argv[])  
 {   
-    map <int, int> dic_process;
+    Dict_Sockets dic_sockets = Dict_Sockets();
 
     omp_lock_t coordinator_lock;
 
@@ -226,6 +251,7 @@ int main(int argc , char *argv[])
     // Coordenador de threads
     #pragma omp parallel num_threads(NT)
     {
+
         int thread_num = omp_get_thread_num();
 
         int opt = TRUE;  
@@ -235,58 +261,52 @@ int main(int argc , char *argv[])
         struct sockaddr_in address;  
             
         char buffer[1025];  //data buffer of 1K 
-            
+     
         //set of socket descriptors 
-        fd_set readfds;  
-            
-        //a message 
-        char *message = "Pao de batata \r\n";          
+        fd_set readfds;         
 
         switch (thread_num)
         {
             case 0:
-                while (true)
+                while(TRUE)
+                {
+                    int command;
+                    cin >> command;
+                    if (command == 1)
                     {
-                    sleep(2000);
-
-                    if (signal(SIGUSR1, signal_handler) == SIG_ERR)
-                    {
-                        cout << "SIGUSR1 não foi capturado \n";
-                    } 
-                    if (signal(SIGPROF, signal_handler) == SIG_ERR)
-                    {
-                        cout << "SIPROF não foi capturado \n";
+                        cout << coordenator.show_queue() << " essa é a fila";
                     }
-                    if (signal(SIGTERM, signal_handler) == SIG_ERR) {
-                        cout << "SIGTERM não foi capturado \n";
-                    }
-
-                    if(gambiarra_no_jutsu)
+                    else if (command == 2)
                     {
-                        omp_set_lock(&coordinator_lock);
-                        cout << "La fila " <<coordenator.show_queue()<< endl;
-                        omp_unset_lock(&coordinator_lock);  
+                        printf("eu sou o comando 2\n");
+                    }
+                    else if (command == 3)
+                    {
+                        exit(0);
                     }
                     else
-                    { // falta printar qunatas vezes cada processo foi atendido
-                    cout << "Gambiarra não ativada" <<endl; 
+                    {
+                        cout << "invalid command\n";
                     }
-                } 
-            
+                }
+
+            /*
             case 1:
                 sleep(3);
-                while (true) {
-                    
+                while (true)
+                {
                     omp_set_lock(&coordinator_lock);
                         cout << "Jo soe el executor de la distribuicion multipla destribuida, release acess "<< coordenator.get_acess() << endl;
                         coordenator.release_access(coordenator.get_acess());
-                    omp_unset_lock(&coordinator_lock);    
+                    omp_unset_lock(&coordinator_lock);
+
                     sleep(4);
-                    }  
-                
-            case 2:               
+                }  
+            */
+
+            case 1:
                 //initialise all client_socket[] to 0 so not checked 
-                for (i = 0; i < max_clients; i++)  
+                for (i = 0; i < max_clients; i++)
                 {  
                     client_socket[i] = 0;  
                 }  
@@ -379,6 +399,7 @@ int main(int argc , char *argv[])
                         printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs
                             (address.sin_port));  
                     
+                        /*
                         //send new connection greeting message 
                         if( send(new_socket, message, strlen(message), 0) != strlen(message) )  
                         {  
@@ -386,7 +407,8 @@ int main(int argc , char *argv[])
                         }  
                             
                         puts("Welcome message sent successfully");  
-                            
+                        */
+
                         //add new socket to array of sockets 
                         for (i = 0; i < max_clients; i++)  
                         {  
@@ -425,26 +447,62 @@ int main(int argc , char *argv[])
                                 
                             //Echo back the message that came in 
                             else
-                            {  
-                                
+                            {   
+                                char *grant_value = "1";
                                 int grant_acess;
-                                read( sd , buffer, 1024);
-                                int pid = atoi(buffer);
-                                omp_set_lock(&coordinator_lock);
-                                    grant_acess = coordenator.request_access(pid);
-                                omp_unset_lock(&coordinator_lock); 
-                                if (grant_acess != NULL){
-                                    send(sd, "1", 1, 0);
+
+                                write(sd, "7", 1);
+                                read(sd, buffer, 1024);
+
+                                char* received_msg = buffer;
+                                int msg_type;
+                                char* msg_number;
+                                int pid;
+
+                                sscanf(received_msg, "%d|%d|%s", &msg_type, &pid, msg_number);
+                                bool cond0 = msg_type == 0;
+                                bool cond3 = msg_type == 2;
+                                printf("%d|%d|%s|%d|%d\n", msg_type, pid, msg_number, cond0, cond3);
+                                dic_sockets.insert_socket_if_nescessary(pid, sd);
+
+                                if(msg_type == 0) {
                                     
+                                    omp_set_lock(&coordinator_lock);
+
+                                        grant_acess = coordenator.request_access(pid);
+                                    omp_unset_lock(&coordinator_lock);
+
+                                    if (grant_acess != NULL) //grant given
+                                    {
+                                      
+                                        write(sd, grant_value, strlen(grant_value));
+                                    }  
+                                }
+
+                                if(msg_type == 2) {
+
+                                    omp_set_lock(&coordinator_lock);
+                                        grant_acess = coordenator.release_access(pid);
+                                    omp_unset_lock(&coordinator_lock);
+
+                                    
+                                    if (grant_acess != NULL) //grant given
+                                    {
+                                        sd = dic_sockets.get_socket(grant_acess);
+                                        
+                                        write(sd, grant_value, strlen(grant_value));
+                                    }  
                                 }
                                 
-                               
 
+                                //write(sd, msg, strlen(msg));
+                                cout << buffer;
                                 
-                                //set the string terminating NULL byte on the end 
-                                //of the data read 
-                                buffer[valread] = '\0';  
-                                send(sd , buffer , strlen(buffer) , 0 );  
+                                
+                                 
+                                
+                            
+                                
                             }  
                         }  
                     }  

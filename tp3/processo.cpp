@@ -61,59 +61,64 @@ static std::string pretty_time()
     return std::string(buffer, buffer + string_size);
 }
 
+
 int main(int argc , char *argv[])
 {
-    int n = atoi(argv[1]);
-    int r = atoi(argv[2]);
-    int k = atoi(argv[3]);
+    //int n = atoi(argv[1]);
+    //int r = atoi(argv[2]);
+    //int k = atoi(argv[3]);
 
-    ofstream myfile;
+    int n = 1;
+    int r = 2;
+    int k = 5;
 
-    int sock = 0;
-    char buffer[10] = {0};
-    struct sockaddr_in serv_addr;
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
-        <= 0)
-    {
-        printf(
-            "\nInvalid address/ Address not supported \n");
-        return -1;
-    }
-
-    if (connect(sock, (struct sockaddr*)&serv_addr,
-                sizeof(serv_addr))
-        < 0)
-    {
-        printf("\nConnection Failed \n");
-        return -1;
-    }
-
+    // creating n processes
     for(int i = 0; i < n; i++) 
     {   
-        if (fork() == 0)
-        {
+        //if (fork() == 0)
+        //{
+            int sock = 0;
+            char buffer[10] = {0};
+            struct sockaddr_in serv_addr;
+            if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+            {
+                printf("\n Socket creation error \n");
+                return -1;
+            }
+
+            serv_addr.sin_family = AF_INET;
+            serv_addr.sin_port = htons(PORT);
+
+            if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)
+                <= 0)
+            {
+                printf(
+                    "\nInvalid address/ Address not supported \n");
+                return -1;
+            }
+
+            if (connect(sock, (struct sockaddr*)&serv_addr,
+                        sizeof(serv_addr))
+                < 0)
+            {
+                printf("\nConnection Failed \n");
+                return -1;
+            }
+            
             int pid = getpid();
             char str_pid[32];
             sprintf(str_pid, "%d", pid);
             
+            //ofstream myfile;
+
+            // sending r messages to server (coordenator)
             for(int j = 0; j < r; j++)
-            {       
-                //char str_j[32];
-                //sprintf(str_j, "%d", j);
-                //char *req_message = strcat(str_pid,"|");
-                //req_message = strcat(req_message,str_j);
+            {   
+                
+                char msg[] = "John China";
+                send(sock, msg, sizeof(msg), 0);
 
-                send(sock, str_pid, strlen(str_pid), 0);
-
+                /*
                 read(sock, buffer, 1024);
 
                 string time = pretty_time();
@@ -121,16 +126,17 @@ int main(int argc , char *argv[])
                 myfile.open ("resultados.txt", ios_base::app);
                 myfile << time << "\n";
                 myfile.close();
+                */
 
-                sleep(k);
+                //sleep(k);
+
+            }   /*
                 char *message = "realese";
                 send(sock, message, strlen(message), 0);
-            }
+                */
+            
             exit(0);
-        }
+        //}
     }
-
-
-
     return 0;
 }
