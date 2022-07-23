@@ -17,12 +17,13 @@
 #include <fstream>
 #include <omp.h>
 #include <signal.h>
+#include <iterator>
 
 using namespace std;
 
 #define TRUE  1 
 #define FALSE 0 
-#define PORT  4242
+#define PORT  8080
 #define NT    2
 
 const int queue_size = 15;
@@ -55,8 +56,7 @@ class Queue { // an interface for a queue
         int max_size; // maximum size of queue
 
     public:
-        Queue()
-        {
+        Queue() {
             n = 0; // number of items in queue
             f = 0; // front
             r = 0;
@@ -69,12 +69,12 @@ class Queue { // an interface for a queue
             return n;
         } 
 
-        bool empty()
+        bool empty() 
         { // is queue empty?
             return n == 0;
-        }
+        }   
 
-        int front()
+        int front() 
         { // return front item
             if (this->empty()) {
                 length_error("Queue is empty");
@@ -82,23 +82,23 @@ class Queue { // an interface for a queue
             return Q[f];
         }
 
-        void enqueue (int x)
+        void enqueue (int x) 
         { // add item to queue
-            if (n = max_size)
+            if (n == max_size) 
             {
                 length_error("Queue maxsize surpassed");
                 return;
             }
-            
-            Q[r] = x;
-            r = (r + 1) % max_size;
-            n++;
+        Q[r] = x;
+        r = (r + 1) % max_size;
+        n++;
         }
 
         // enqueue element at rear
         void dequeue()  // dequeue element at front
         {
-            if (this->empty()) {
+            if (this->empty()) 
+            {
                 length_error("Queue is empty");
                 return;
             }
@@ -106,8 +106,7 @@ class Queue { // an interface for a queue
             n--;
         }
 
-        string full_queue()
-        {
+        string full_queue() {
             int i = f;
             string s = "";
             while (i != r) {
@@ -115,7 +114,7 @@ class Queue { // an interface for a queue
                 i = (i + 1) % max_size;
             }
             return s;
-        }
+        };
 };
 
 class Dict_Sockets {
@@ -146,6 +145,7 @@ class Dict_Sockets {
 class Process_Counter {
     private:
         map <int, int> dic_process;
+        map<int, int>::iterator itr;
 
     public:
         Process_Counter()
@@ -170,6 +170,22 @@ class Process_Counter {
             return dic_process[process_id];
         }
 
+        void clear_counter() 
+        {
+            dic_process.clear();
+        } 
+
+        string get_all_counts()
+        {
+            string s = "";
+            for (itr = dic_process.begin(); itr != dic_process.end(); ++itr) {
+                //cout << '\t' << itr->first << '\t' << itr->second
+                //    << '\n';
+                s +=  "{" + to_string(itr->first) + "," + to_string(itr->second) + "}" + ",";
+            }
+            return s;
+        }
+
 };
 
 class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
@@ -186,13 +202,17 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
     {
 
         if (acess_queue.empty())  {
-            cout << "Granted to Process " << process_id << " has access\n";
+            cout << "Granted to Process " << process_id << "\n";
+            acess_queue.enqueue(process_id);
+            cout << "fila " << acess_queue.full_queue() << endl;
             return process_id;
         }
             // grant acess to process_id
 
             acess_queue.enqueue(process_id);
-        return NULL;
+            cout << acess_queue.full_queue() << endl;
+
+        return -1;
 
     }
     int release_access(int process_id)
@@ -200,23 +220,17 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
 
         if (process_id != acess_queue.front()) {
             // process_id did not request access
-            return NULL;
+            return -1;
         }
-
             acess_queue.dequeue();
 
-
-
         if (!acess_queue.empty()) {
-
-
             int process_with_acess = acess_queue.front();;
             // grant acess to process_with_acess
-            cout << "Granted to Process " << process_with_acess << " has access\n";
+            cout << "Granted to Process " << process_with_acess << "\n";
             return process_with_acess;
-
         } 
-        return NULL;
+        return -1;
     }
         int get_acess()
         {
@@ -232,16 +246,18 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
 
 int main(int argc , char *argv[])  
 {   
+    //Process_Counter 
     Dict_Sockets dic_sockets = Dict_Sockets();
+    Process_Counter grant_counter = Process_Counter();
 
     omp_lock_t coordinator_lock;
-
-    ofstream MyFile("log.txt");
+    omp_lock_t grant_counter_lock;
 
     int mypid = getpid();
     cout << "O meu codigo e " << mypid << endl;
 
     omp_init_lock(&coordinator_lock);
+    omp_init_lock(&grant_counter_lock);
 
     CADME coordenator = CADME();
 
@@ -262,6 +278,7 @@ int main(int argc , char *argv[])
             
         char buffer[1025];  //data buffer of 1K 
      
+        string str_queue;
         //set of socket descriptors 
         fd_set readfds;         
 
@@ -273,12 +290,18 @@ int main(int argc , char *argv[])
                     int command;
                     cin >> command;
                     if (command == 1)
-                    {
-                        cout << coordenator.show_queue() << " essa é a fila";
+                    {   
+                        #pragma omp_set_lock(&coordinator_lock)
+                           str_queue = coordenator.show_queue();
+                        #pragma omp_unset_lock(&coordinator_lock)
+                        cout << "\n" << str_queue << " essa é a fila\n\n";
                     }
                     else if (command == 2)
                     {
-                        printf("eu sou o comando 2\n");
+                        #pragma omp_set_lock(&grant_counter_lock)
+                           str_queue = grant_counter.get_all_counts();
+                        #pragma omp_unset_lock(&grant_counter_lock)
+                        cout << "\n" << str_queue << " essa é a quantidade aceitações de cada processo\n\n";
                     }
                     else if (command == 3)
                     {
@@ -289,20 +312,6 @@ int main(int argc , char *argv[])
                         cout << "invalid command\n";
                     }
                 }
-
-            /*
-            case 1:
-                sleep(3);
-                while (true)
-                {
-                    omp_set_lock(&coordinator_lock);
-                        cout << "Jo soe el executor de la distribuicion multipla destribuida, release acess "<< coordenator.get_acess() << endl;
-                        coordenator.release_access(coordenator.get_acess());
-                    omp_unset_lock(&coordinator_lock);
-
-                    sleep(4);
-                }  
-            */
 
             case 1:
                 //initialise all client_socket[] to 0 so not checked 
@@ -398,16 +407,6 @@ int main(int argc , char *argv[])
                         //inform user of socket number - used in send and receive commands 
                         printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs
                             (address.sin_port));  
-                    
-                        /*
-                        //send new connection greeting message 
-                        if( send(new_socket, message, strlen(message), 0) != strlen(message) )  
-                        {  
-                            perror("send");  
-                        }  
-                            
-                        puts("Welcome message sent successfully");  
-                        */
 
                         //add new socket to array of sockets 
                         for (i = 0; i < max_clients; i++)  
@@ -432,7 +431,7 @@ int main(int argc , char *argv[])
                         {  
                             //Check if it was for closing , and also read the 
                             //incoming message 
-                            if ((valread = read( sd , buffer, 1024)) == 0)  
+                            if ((valread = read(sd, buffer, 1024)) == 0)  
                             {  
                                 //Somebody disconnected , get his details and print 
                                 getpeername(sd , (struct sockaddr*)&address , \
@@ -448,73 +447,65 @@ int main(int argc , char *argv[])
                             //Echo back the message that came in 
                             else
                             {   
-                                char *grant_value = "1";
+                                ofstream myfile;
+                                myfile.open ("log.txt", ios_base::app);
+                                const char* grant_value = "1";
                                 int grant_acess;
-
-                                write(sd, "7", 1);
-                                read(sd, buffer, 1024);
 
                                 char* received_msg = buffer;
                                 int msg_type;
-                                char* msg_number;
+                                int msg_number;
                                 int pid;
 
-                                sscanf(received_msg, "%d|%d|%s", &msg_type, &pid, msg_number);
-                                bool cond0 = msg_type == 0;
-                                bool cond3 = msg_type == 2;
-                                printf("%d|%d|%s|%d|%d\n", msg_type, pid, msg_number, cond0, cond3);
+                                sscanf(received_msg, "%d|%d|%d", &msg_type, &pid, &msg_number);
+                                printf("%d|%d|%d\n", msg_type, pid, msg_number);
                                 dic_sockets.insert_socket_if_nescessary(pid, sd);
+                                myfile << msg_type << "|" << pid << endl;
 
-                                if(msg_type == 0) {
-                                    
+                                if(msg_type == 0) 
+                                {
                                     omp_set_lock(&coordinator_lock);
-
                                         grant_acess = coordenator.request_access(pid);
                                     omp_unset_lock(&coordinator_lock);
-
-                                    if (grant_acess != NULL) //grant given
+                                    
+                                    if (grant_acess != -1) //grant given
                                     {
-                                      
                                         write(sd, grant_value, strlen(grant_value));
+                                        omp_set_lock(&grant_counter_lock);
+                                            grant_counter.inc_process_count(grant_acess);
+                                        omp_unset_lock(&grant_counter_lock);
+                                        myfile << "1" << "|" << pid << endl;
                                     }  
                                 }
 
-                                if(msg_type == 2) {
-
+                                if(msg_type == 2)
+                                {
                                     omp_set_lock(&coordinator_lock);
                                         grant_acess = coordenator.release_access(pid);
                                     omp_unset_lock(&coordinator_lock);
 
-                                    
-                                    if (grant_acess != NULL) //grant given
+                                    if (grant_acess != -1) //grant given
                                     {
                                         sd = dic_sockets.get_socket(grant_acess);
-                                        
                                         write(sd, grant_value, strlen(grant_value));
+                                        omp_set_lock(&grant_counter_lock);
+                                            grant_counter.inc_process_count(grant_acess);
+                                        omp_unset_lock(&grant_counter_lock);
+                                        myfile << "1" << "|" << grant_acess << endl;
                                     }  
                                 }
-                                
 
-                                //write(sd, msg, strlen(msg));
-                                cout << buffer;
-                                
-                                
-                                 
-                                
-                            
-                                
+                                myfile.close();
                             }  
                         }  
                     }  
                 }
 
             default:
-                cout << "Jo no deveria existir " << endl;
+                cout << "Não deveria entrar aqui" << endl;
                 break;
         }
     }
-
-    MyFile.close();
 
     return 0;    
 }  

@@ -4,6 +4,7 @@
         "system_error": "cpp",
         "iosfwd": "cpp",
         "sstream": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "ostream": "cpp"
     }
 }

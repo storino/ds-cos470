@@ -11,24 +11,25 @@ except socket.error as err:
     print ("socket creation failed with error %s" %(err))
  
 # connecting to the server
-s.connect(("127.0.0.1", 4242))
+s.connect(("127.0.0.1", 8080))
 
 pid = os.getpid()
-r = 20
+r = 3
 
 i = 0
-while i <= r:
-    
+while i < r:
+
+    i += 1
 
     request_msg = f"0|{pid}|{i}"
-    s.send(request_msg.encode())
-    grant_msg = s.recv(1)
-    print("valor da mensagem é " + str())
-    if(grant_msg.decode() == "7"):
-        print("aribaa")
-        continue
+    #print(f'{i} antes do send request')
 
-    if grant_msg.decode() == '1':
+    s.send(request_msg.encode())
+
+    grant_msg = s.recv(1).decode()
+
+
+    if grant_msg == '1':
         hora_atual = datetime.now()
         resultado = open("resultado.txt", "a")
         resultado.write(f"{hora_atual} | {pid} | {i}\n")
@@ -38,6 +39,7 @@ while i <= r:
 
     else:
         print("Sem permissão para executar o processo")
+    
+    #sleep(5)
 
-    sleep(1)
 s.close()
