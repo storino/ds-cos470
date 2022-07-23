@@ -22,7 +22,7 @@ for i in range(r):
     request_msg = f"0|{pid}|{i}"
     s.send(request_msg.encode())
     grant_msg = s.recv(1)
-    print("valor da mensagem é " + str(r))
+    print("valor da mensagem é " + str())
     if(grant_msg.decode() == "7"):
         print("aribaa")
         continue
