@@ -16,8 +16,9 @@ s.connect(("127.0.0.1", 4242))
 pid = os.getpid()
 r = 20
 
-
-for i in range(r):
+i = 0
+while i <= r:
+    
 
     request_msg = f"0|{pid}|{i}"
     s.send(request_msg.encode())

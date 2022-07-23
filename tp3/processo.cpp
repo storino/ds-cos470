@@ -116,7 +116,7 @@ int main(int argc , char *argv[])
             {   
                 
                 char msg[] = "John China";
-                send(sock, msg, sizeof(msg), 0);
+                send(sock, msg, sizeof(msg),0);
 
                 /*
                 read(sock, buffer, 1024);

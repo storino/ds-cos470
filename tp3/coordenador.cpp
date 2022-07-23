@@ -339,7 +339,7 @@ int main(int argc , char *argv[])
                     exit(EXIT_FAILURE);  
                 }  
                 printf("Listener on port %d \n", PORT);  
-                    
+            
                 //try to specify maximum of 3 pending connections for the master socket 
                 if (listen(master_socket, 3) < 0)  
                 {  
@@ -437,7 +437,7 @@ int main(int argc , char *argv[])
                                 //Somebody disconnected , get his details and print 
                                 getpeername(sd , (struct sockaddr*)&address , \
                                     (socklen_t*)&addrlen);  
-                                printf("Host disconnected , ip %s , port %d \n" , 
+                                printf("Host disconnected, ip %s , port %d \n" , 
                                     inet_ntoa(address.sin_addr) , ntohs(address.sin_port));  
                                     
                                 //Close the socket and mark as 0 in list for reuse 
