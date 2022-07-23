@@ -14,7 +14,7 @@ except socket.error as err:
 s.connect(("127.0.0.1", 8080))
 
 pid = os.getpid()
-r = 3
+r = 10
 
 i = 0
 while i < r:
@@ -22,7 +22,6 @@ while i < r:
     i += 1
 
     request_msg = f"0|{pid}|{i}"
-    #print(f'{i} antes do send request')
 
     s.send(request_msg.encode())
 
@@ -40,6 +39,6 @@ while i < r:
     else:
         print("Sem permissão para executar o processo")
     
-    #sleep(5)
+    sleep(2)
 
 s.close()

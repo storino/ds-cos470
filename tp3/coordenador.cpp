@@ -1,4 +1,3 @@
-//Example code: A simple server side code, which echos back the received message.
 //Handle multiple socket connections with select and fd_set on Linux 
 #include <stdio.h> 
 #include <string.h>
@@ -18,32 +17,61 @@
 #include <omp.h>
 #include <signal.h>
 #include <iterator>
+#include <ctime>
+#include <chrono>
 
 using namespace std;
 
 #define TRUE  1 
 #define FALSE 0 
+
 #define PORT  8080
 #define NT    2
 
 const int queue_size = 15;
-bool gambiarra_no_jutsu;
 
-void signal_handler(int sig)
+// strftime format
+#define LOGGER_PRETTY_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
+
+// printf format
+#define LOGGER_PRETTY_MS_FORMAT ".%03d"
+
+// convert current time to milliseconds since unix epoch
+template <typename T>
+static int to_ms(const chrono::time_point<T>& tp)
 {
-    if (sig == SIGUSR1)
-    {
-        gambiarra_no_jutsu = true;
-    }
-    if (sig == SIGPROF)
-    {
-        gambiarra_no_jutsu = false;
-    }
-    if (sig == SIGTERM)
-    {
-        cout << "Caboooooou\n";
-        exit(0);
-    }
+    using namespace chrono;
+
+    auto dur = tp.time_since_epoch();
+    return static_cast<int>(duration_cast<milliseconds>(dur).count());
+}
+
+
+// format it in two parts: main part with date and time and part with milliseconds
+static string pretty_time()
+{
+    auto tp = chrono::system_clock::now();
+    time_t current_time = chrono::system_clock::to_time_t(tp);
+
+    // this function use static global pointer. so it is not thread safe solution
+    tm* time_info = localtime(&current_time);
+
+    char buffer[128];
+
+    int string_size = strftime(
+        buffer, sizeof(buffer),
+        LOGGER_PRETTY_TIME_FORMAT,
+        time_info
+    );
+
+    int ms = to_ms(tp) % 1000;
+
+    string_size += snprintf(
+        buffer + string_size, sizeof(buffer) - string_size,
+        LOGGER_PRETTY_MS_FORMAT, ms
+    );
+
+    return string(buffer, buffer + string_size);
 }
 
 class Queue { // an interface for a queue
@@ -202,9 +230,9 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
     {
 
         if (acess_queue.empty())  {
-            cout << "Granted to Process " << process_id << "\n";
+            cout << "Granted to process: " << process_id << endl;
             acess_queue.enqueue(process_id);
-            cout << "fila " << acess_queue.full_queue() << endl;
+            cout << "Queue " << acess_queue.full_queue() << endl;
             return process_id;
         }
             // grant acess to process_id
@@ -227,7 +255,7 @@ class CADME {//Centralised Algorythm for Distributed Mutual Exclusion
         if (!acess_queue.empty()) {
             int process_with_acess = acess_queue.front();;
             // grant acess to process_with_acess
-            cout << "Granted to Process " << process_with_acess << "\n";
+            cout << "Granted to process: " << process_with_acess << "\n";
             return process_with_acess;
         } 
         return -1;
@@ -254,7 +282,7 @@ int main(int argc , char *argv[])
     omp_lock_t grant_counter_lock;
 
     int mypid = getpid();
-    cout << "O meu codigo e " << mypid << endl;
+    cout << "My pid is " << mypid << endl;
 
     omp_init_lock(&coordinator_lock);
     omp_init_lock(&grant_counter_lock);
@@ -294,14 +322,14 @@ int main(int argc , char *argv[])
                         #pragma omp_set_lock(&coordinator_lock)
                            str_queue = coordenator.show_queue();
                         #pragma omp_unset_lock(&coordinator_lock)
-                        cout << "\n" << str_queue << " essa é a fila\n\n";
+                        cout << "\n" << str_queue << " < Queue\n\n";
                     }
                     else if (command == 2)
                     {
                         #pragma omp_set_lock(&grant_counter_lock)
                            str_queue = grant_counter.get_all_counts();
                         #pragma omp_unset_lock(&grant_counter_lock)
-                        cout << "\n" << str_queue << " essa é a quantidade aceitações de cada processo\n\n";
+                        cout << "\n" << str_queue << " < This is the number of GRANT messages for each process.\n\n";
                     }
                     else if (command == 3)
                     {
@@ -309,7 +337,7 @@ int main(int argc , char *argv[])
                     }
                     else
                     {
-                        cout << "invalid command\n";
+                        cout << "Invalid command.\n\n";
                     }
                 }
 
@@ -398,7 +426,7 @@ int main(int argc , char *argv[])
                     if (FD_ISSET(master_socket, &readfds))  
                     {  
                         if ((new_socket = accept(master_socket, 
-                                (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)  
+                                (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0)  
                         {  
                             perror("accept");  
                             exit(EXIT_FAILURE);  
@@ -449,6 +477,7 @@ int main(int argc , char *argv[])
                             {   
                                 ofstream myfile;
                                 myfile.open ("log.txt", ios_base::app);
+
                                 const char* grant_value = "1";
                                 int grant_acess;
 
@@ -459,42 +488,58 @@ int main(int argc , char *argv[])
 
                                 sscanf(received_msg, "%d|%d|%d", &msg_type, &pid, &msg_number);
                                 printf("%d|%d|%d\n", msg_type, pid, msg_number);
-                                dic_sockets.insert_socket_if_nescessary(pid, sd);
-                                myfile << msg_type << "|" << pid << endl;
 
+                                dic_sockets.insert_socket_if_nescessary(pid, sd);
+                                
                                 if(msg_type == 0) 
                                 {
+                                    string time = pretty_time();
+                                    myfile << time << " | " << pid << " | " << "REQUEST" << endl;
+
                                     omp_set_lock(&coordinator_lock);
-                                        grant_acess = coordenator.request_access(pid);
+                                    grant_acess = coordenator.request_access(pid);
                                     omp_unset_lock(&coordinator_lock);
                                     
                                     if (grant_acess != -1) //grant given
                                     {
                                         write(sd, grant_value, strlen(grant_value));
+
                                         omp_set_lock(&grant_counter_lock);
-                                            grant_counter.inc_process_count(grant_acess);
+                                        grant_counter.inc_process_count(grant_acess);
                                         omp_unset_lock(&grant_counter_lock);
-                                        myfile << "1" << "|" << pid << endl;
+
+                                        string time = pretty_time();
+                                        myfile << time << " | " << pid << " | " << "GRANT" << endl;
                                     }  
                                 }
 
                                 if(msg_type == 2)
                                 {
+                                    string time = pretty_time();
+                                    myfile << time << " | " << pid << " | " << "RELEASE" << endl;
+
                                     omp_set_lock(&coordinator_lock);
-                                        grant_acess = coordenator.release_access(pid);
+                                    grant_acess = coordenator.release_access(pid);
                                     omp_unset_lock(&coordinator_lock);
 
                                     if (grant_acess != -1) //grant given
                                     {
                                         sd = dic_sockets.get_socket(grant_acess);
                                         write(sd, grant_value, strlen(grant_value));
+
                                         omp_set_lock(&grant_counter_lock);
-                                            grant_counter.inc_process_count(grant_acess);
+                                        grant_counter.inc_process_count(grant_acess);
                                         omp_unset_lock(&grant_counter_lock);
-                                        myfile << "1" << "|" << grant_acess << endl;
+
+                                        string time = pretty_time();
+                                        myfile << time << " | " << pid << " | " << "GRANT" << endl;
                                     }  
                                 }
-
+                                else
+                                {
+                                    cout << "Type of message received is not 0 (REQUEST) nor 2 (RELEASE)" << endl;
+                                }
+                                
                                 myfile.close();
                             }  
                         }  
@@ -502,7 +547,7 @@ int main(int argc , char *argv[])
                 }
 
             default:
-                cout << "Não deveria entrar aqui" << endl;
+                cout << "A thread has been created incorrectly" << endl;
                 break;
         }
     }
