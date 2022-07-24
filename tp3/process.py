@@ -1,5 +1,5 @@
 import socket
-#import sys
+import sys
 import os
 from time import sleep
 from datetime import datetime
@@ -11,10 +11,12 @@ except socket.error as err:
     print ("socket creation failed with error %s" %(err))
  
 # connecting to the server
-s.connect(("127.0.0.1", 8080))
+s.connect(("127.0.0.1", 8000))
 
 pid = os.getpid()
-r = 10
+
+r = int(sys.argv[1])
+k = int(sys.argv[2])
 
 i = 0
 while i < r:
@@ -22,11 +24,10 @@ while i < r:
     i += 1
 
     request_msg = f"0|{pid}|{i}"
-
+    sleep(0.01)
     s.send(request_msg.encode())
-
+    sleep(0.01)
     grant_msg = s.recv(1).decode()
-
 
     if grant_msg == '1':
         hora_atual = datetime.now()
@@ -39,6 +40,6 @@ while i < r:
     else:
         print("Sem permissão para executar o processo")
     
-    sleep(2)
+    sleep(k)
 
 s.close()

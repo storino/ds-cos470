@@ -25,7 +25,7 @@ using namespace std;
 #define TRUE  1 
 #define FALSE 0 
 
-#define PORT  8080
+#define PORT  8000
 #define NT    2
 
 const int queue_size = 15;
@@ -299,12 +299,12 @@ int main(int argc , char *argv[])
         int thread_num = omp_get_thread_num();
 
         int opt = TRUE;  
-        int master_socket , addrlen , new_socket , client_socket[128] , 
-            max_clients = 128 , activity, i , valread , sd;  
+        int master_socket , addrlen , new_socket , client_socket[128], 
+            max_clients = 128, activity, i, valread, sd;  
         int max_sd;  
         struct sockaddr_in address;  
             
-        char buffer[1025];  //data buffer of 1K 
+        char buffer[16384];
      
         string str_queue;
         //set of socket descriptors 
@@ -320,14 +320,14 @@ int main(int argc , char *argv[])
                     if (command == 1)
                     {   
                         #pragma omp_set_lock(&coordinator_lock)
-                           str_queue = coordenator.show_queue();
+                        str_queue = coordenator.show_queue();
                         #pragma omp_unset_lock(&coordinator_lock)
                         cout << "\n" << str_queue << " < Queue\n\n";
                     }
                     else if (command == 2)
                     {
                         #pragma omp_set_lock(&grant_counter_lock)
-                           str_queue = grant_counter.get_all_counts();
+                        str_queue = grant_counter.get_all_counts();
                         #pragma omp_unset_lock(&grant_counter_lock)
                         cout << "\n" << str_queue << " < This is the number of GRANT messages for each process.\n\n";
                     }
@@ -459,7 +459,7 @@ int main(int argc , char *argv[])
                         {  
                             //Check if it was for closing , and also read the 
                             //incoming message 
-                            if ((valread = read(sd, buffer, 1024)) == 0)  
+                            if ((valread = read(sd, buffer, 16384)) == 0)  
                             {  
                                 //Somebody disconnected , get his details and print 
                                 getpeername(sd , (struct sockaddr*)&address , \
@@ -513,7 +513,7 @@ int main(int argc , char *argv[])
                                     }  
                                 }
 
-                                if(msg_type == 2)
+                                else if(msg_type == 2)
                                 {
                                     string time = pretty_time();
                                     myfile << time << " | " << pid << " | " << "RELEASE" << endl;
@@ -537,9 +537,9 @@ int main(int argc , char *argv[])
                                 }
                                 else
                                 {
-                                    cout << "Type of message received is not 0 (REQUEST) nor 2 (RELEASE)" << endl;
+                                    cout << "Type of message received is not 0 (REQUEST) nor 2 (RELEASE)" <<  endl;
                                 }
-                                
+
                                 myfile.close();
                             }  
                         }  
