@@ -355,8 +355,7 @@ int main(int argc , char *argv[])
                     exit(EXIT_FAILURE);  
                 }  
                 
-                //set master socket to allow multiple connections , 
-                //this is just a good habit, it will work without this 
+                //set master socket to allow multiple connections
                 if( setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, 
                     sizeof(opt)) < 0 )  
                 {  
@@ -369,7 +368,7 @@ int main(int argc , char *argv[])
                 address.sin_addr.s_addr = INADDR_ANY;  
                 address.sin_port = htons( PORT );  
                     
-                //bind the socket to localhost port 8888 
+                //bind the socket to localhost port
                 if (bind(master_socket, (struct sockaddr *)&address, sizeof(address))<0)  
                 {  
                     perror("bind failed");  
@@ -509,7 +508,7 @@ int main(int argc , char *argv[])
                                         omp_unset_lock(&grant_counter_lock);
 
                                         string time = pretty_time();
-                                        myfile << time << " | " << pid << " | " << "GRANT" << endl;
+                                        myfile << time << " | " << grant_acess << " | " << "GRANT" << endl;
                                     }  
                                 }
 
@@ -532,7 +531,7 @@ int main(int argc , char *argv[])
                                         omp_unset_lock(&grant_counter_lock);
 
                                         string time = pretty_time();
-                                        myfile << time << " | " << pid << " | " << "GRANT" << endl;
+                                        myfile << time << " | " << grant_acess << " | " << "GRANT" << endl;
                                     }  
                                 }
                                 else

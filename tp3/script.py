@@ -43,8 +43,6 @@ for test_number in range(1,4):
     
     RUNTIMES.append(runtimes)
 
-print(RUNTIMES)
-
 """
 plt.bar(br + bar_width*(test_number - 1), a, label=f'r=10, k=2')
 plt.bar(br + bar_width*(test_number - 1), b, label=f'r=5, k=1')
